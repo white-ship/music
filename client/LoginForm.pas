@@ -1,0 +1,107 @@
+unit LoginForm;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls
+  , System.Net.HttpClient,System.Net.URLClient,MainForm;
+
+type
+  TFormLogin = class(TForm)
+    EditUsername: TEdit;
+    EditPassword: TEdit;
+    BtnRegister: TButton;
+    BtnLogin: TButton;
+    MemoResponse: TMemo;
+    Label1: TLabel;
+    Label2: TLabel;
+    procedure BtnRegisterClick(Sender: TObject);
+    procedure BtnLoginClick(Sender: TObject);
+  private
+    HTTP: THttpClient;
+    procedure SendRequest(const Path: string);
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+  end;
+
+var
+  FormLogin: TFormLogin;
+
+implementation
+
+{$R *.dfm}
+
+constructor TFormLogin.Create(AOwner: TComponent);
+begin
+  inherited;
+  HTTP := THttpClient.Create;
+end;
+
+destructor TFormLogin.Destroy;
+begin
+  HTTP.Free;
+  inherited;
+end;
+
+procedure TFormLogin.SendRequest(const Path: string);
+var
+  URL, JsonBody, ResponseText: string;
+  Response: IHTTPResponse;
+  Stream: TStringStream;
+  Headers: TNetHeaders;
+begin
+  URL := 'http://localhost:4567' + Path;
+  JsonBody := Format('{"username":"%s","password":"%s"}', [
+    EditUsername.Text, EditPassword.Text]);
+  Stream := TStringStream.Create(JsonBody, TEncoding.UTF8);
+  try
+    SetLength(Headers, 1);
+    Headers[0] := TNameValuePair.Create('Content-Type', 'application/json');
+    Response := HTTP.Post(URL, Stream, nil, Headers);
+    ResponseText := Response.ContentAsString();
+
+    MemoResponse.Lines.Add(ResponseText);
+
+    if Path = '/login' then
+    begin
+      if Pos('Login Successful', ResponseText) > 0 then
+      begin
+        Hide;
+        Application.CreateForm(TFormMain, FormMain); // 创建主窗体
+        FormMain.Show;
+      end
+      else
+      begin
+        ShowMessage('登录失败，请检查用户名或密码');
+      end;
+    end
+    else if Path = '/register' then
+    begin
+      if Pos('Registered', ResponseText) > 0 then
+        ShowMessage('注册成功！')
+      else
+        ShowMessage('注册失败：' + ResponseText);
+    end;
+  except
+    on E: Exception do
+    begin
+      ShowMessage('请求失败：' + E.Message);
+    end;
+  end;
+  Stream.Free;
+end;
+
+
+
+procedure TFormLogin.BtnRegisterClick(Sender: TObject);
+begin
+  SendRequest('/register');
+end;
+
+procedure TFormLogin.BtnLoginClick(Sender: TObject);
+begin
+  SendRequest('/login');
+end;
+end.
