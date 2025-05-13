@@ -3,9 +3,9 @@ unit LoginForm;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.JSON,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls
-  , System.Net.HttpClient,System.Net.URLClient,MainForm;
+  , System.Net.HttpClient,System.Net.URLClient,MainForm,CurrentUser;
 
 type
   TFormLogin = class(TForm)
@@ -13,7 +13,6 @@ type
     EditPassword: TEdit;
     BtnRegister: TButton;
     BtnLogin: TButton;
-    MemoResponse: TMemo;
     Label1: TLabel;
     Label2: TLabel;
     procedure BtnRegisterClick(Sender: TObject);
@@ -47,6 +46,9 @@ end;
 
 procedure TFormLogin.SendRequest(const Path: string);
 var
+  JsonResponse: TJSONObject;
+  Status: string;
+  UserId: Integer;
   URL, JsonBody, ResponseText: string;
   Response: IHTTPResponse;
   Stream: TStringStream;
@@ -62,12 +64,16 @@ begin
     Response := HTTP.Post(URL, Stream, nil, Headers);
     ResponseText := Response.ContentAsString();
 
-    MemoResponse.Lines.Add(ResponseText);
+    JsonResponse := TJSONObject.ParseJSONValue(ResponseText) as TJSONObject;
 
     if Path = '/login' then
     begin
-      if Pos('Login Successful', ResponseText) > 0 then
+      Status := JsonResponse.GetValue<string>('status');
+      if Status = 'success' then
       begin
+        AppUser.UserID := JsonResponse.GetValue<Integer>('userID');
+        AppUser.Username := JsonResponse.GetValue<string>('username');
+
         Hide;
         Application.CreateForm(TFormMain, FormMain); // 创建主窗体
         FormMain.Show;

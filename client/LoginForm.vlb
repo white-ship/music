@@ -16,9 +16,6 @@ Coordinates=10,146,53,58
 [BtnRegister]
 Coordinates=219,78,82,58
 
-[MemoResponse]
-Coordinates=160,10,107,58
-
 []
-Coordinates=290,78,91,36
+Coordinates=160,10,107,58
 

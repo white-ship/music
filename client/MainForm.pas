@@ -5,11 +5,9 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
-  Vcl.ComCtrls, Vcl.MPlayer, Vcl.Imaging.jpeg, FireDAC.Stan.Intf,
-  FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
-  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys,
-  FireDAC.VCLUI.Wait, Data.DB, FireDAC.Comp.Client, Data.Win.ADODB,
-  FireDAC.Phys.ODBCBase;
+  Vcl.ComCtrls, Vcl.MPlayer, Vcl.Imaging.jpeg,CurrentUser, System.JSON,
+  System.Net.HttpClient,System.Net.URLClient,IdHTTP, IdMultipartFormData,
+  UploadDialog;
 
 type
     TString = class(TObject)
@@ -41,7 +39,9 @@ type
     btnStop: TButton;
     MediaPlayer1: TMediaPlayer;
     OpenDialog1: TOpenDialog;
-    ADOConnection1: TADOConnection;
+    lblUserInfoTitle: TLabel;
+    lblUserInfo: TLabel;
+    btnUploadMusic: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnAddSongClick(Sender: TObject);
@@ -54,6 +54,7 @@ type
     function GetRealFilePath(Index: Integer): string;
     procedure Timer1Timer(Sender: TObject);
     procedure tbProgressChange(Sender: TObject);
+    procedure btnUploadMusicClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -89,6 +90,9 @@ begin
   tbProgress.Position := 0;
   lblCurrentTime.Caption := '00:00';
   lblTotalTime.Caption := '00:00';
+
+  // 显示用户信息
+  lblUserInfo.Caption := Format('用户名: %s, ID: %d', [AppUser.Username, AppUser.UserID]);
 
   // 初始化定时器
   Timer1.Interval := 500; // 每500毫秒更新一次
@@ -259,6 +263,48 @@ begin
   Timer1.Enabled := False;
   tbProgress.Position := 0;
   lblCurrentTime.Caption := '00:00';
+end;
+
+procedure TFormMain.btnUploadMusicClick(Sender: TObject);
+var
+  HTTP: TIdHTTP;
+  FormData: TIdMultiPartFormDataStream;
+begin
+  FormUploadDialog := TFormUploadDialog.Create(Self);
+  try
+    if FormUploadDialog.ShowModal = mrOk then
+    begin
+      if not FileExists(FormUploadDialog.EditFile.Text) then
+      begin
+        ShowMessage('请选择有效的音乐文件');
+        Exit;
+      end;
+
+      // 创建上传请求
+      HTTP := TIdHTTP.Create(nil);
+      FormData := TIdMultiPartFormDataStream.Create;
+      try
+        FormData.AddFormField('title', FormUploadDialog.EditName.Text);
+        FormData.AddFormField('album', FormUploadDialog.EditAlbum.Text);
+        FormData.AddFormField('duration', FormUploadDialog.EditDuration.Text);
+        FormData.AddFormField('uploader_id', IntToStr(AppUser.UserID));
+        FormData.AddFormField('uploader_name', AppUser.Username);
+        FormData.AddFile('file', FormUploadDialog.EditFile.Text, 'audio/mpeg');
+
+        HTTP.Request.ContentType := FormData.RequestContentType;
+        HTTP.Request.CharSet := 'utf-8';
+
+        ShowMessage('上传返回：' + HTTP.Post('http://localhost:4567/upload', FormData));
+      except
+        on E: Exception do
+          ShowMessage('上传失败: ' + E.Message);
+      end;
+      HTTP.Free;
+      FormData.Free;
+    end;
+  finally
+    FormUploadDialog.Free;
+  end;
 end;
 
 //自动连续播放

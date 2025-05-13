@@ -65,13 +65,35 @@ object formMain: TformMain
     ExplicitWidth = 648
     ExplicitHeight = 552
     object imgAlbumArt: TImage
-      Left = 146
-      Top = 98
+      Left = 66
+      Top = 82
       Width = 350
       Height = 350
       Center = True
       Proportional = True
       Stretch = True
+    end
+    object lblUserInfoTitle: TLabel
+      Left = 20
+      Top = 16
+      Width = 65
+      Height = 15
+      Caption = #24403#21069#29992#25143#65306
+    end
+    object lblUserInfo: TLabel
+      Left = 20
+      Top = 37
+      Width = 3
+      Height = 15
+    end
+    object btnUploadMusic: TButton
+      Left = 552
+      Top = 98
+      Width = 75
+      Height = 25
+      Caption = #19978#20256#38899#20048
+      TabOrder = 0
+      OnClick = btnUploadMusicClick
     end
   end
   object pnlControls: TPanel
@@ -158,21 +180,13 @@ object formMain: TformMain
   end
   object OpenDialog1: TOpenDialog
     Filter = #38899#39057#25991#20214'|*.mp3;*.wav;*.wma|'#25152#26377#25991#20214'|*.*'
-    Left = 400
-    Top = 440
+    Left = 392
+    Top = 472
   end
   object Timer1: TTimer
     Interval = 500
     OnTimer = Timer1Timer
     Left = 532
-    Top = 440
-  end
-  object ADOConnection1: TADOConnection
-    ConnectionString = 
-      'Provider=MSDASQL.1;Persist Security Info=False;User ID=myroot;Da' +
-      'ta Source=opengauss'
-    Provider = 'MSDASQL.1'
-    Left = 698
-    Top = 336
+    Top = 472
   end
 end

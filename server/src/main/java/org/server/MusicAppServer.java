@@ -1,16 +1,20 @@
 package org.server;
 
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.google.gson.Gson;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.sql.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.security.MessageDigest;
 
@@ -22,6 +26,7 @@ public class MusicAppServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(4567), 0);
         server.createContext("/register", new RegisterHandler());
         server.createContext("/login", new LoginHandler());
+        server.createContext("/upload", new UploadHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -89,7 +94,7 @@ public class MusicAppServer {
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
-                sendResponse(exchange, 500, "{\"status\":\"error\"}");
+                sendResponse(exchange, 500, "error");
                 return;
             }
             sendResponse(exchange, 200, gson.toJson("Registered"));
@@ -106,21 +111,120 @@ public class MusicAppServer {
             String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().collect(Collectors.joining("\n"));
             User u = gson.fromJson(body, User.class);
+
             boolean success = false;
+            JsonObject resp = new JsonObject();
             try (Connection conn = MusicAppServer.GetConnection("myroot", "Lhx050918")) {
                 String key = "Abc123!@";
-                String sql = "SELECT count(*) FROM users WHERE username = ? AND password = ?";
+                String sql = "SELECT id, username FROM users WHERE username = ? AND password = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setString(1, u.username);
                     ps.setString(2, sha256(u.password));
                     try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next() && rs.getInt(1) == 1) success = true;
+                        if (rs.next()) {
+                            // 登录成功
+                            resp.addProperty("status", "success");
+                            resp.addProperty("userID", rs.getInt("id"));
+                            resp.addProperty("username", rs.getString("username"));
+                        } else {
+                            // 登录失败
+                            resp.addProperty("status", "fail");
+                            resp.addProperty("message", "Invalid username or password");
+                        }
                     }
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
+                resp.addProperty("status", "error");
+                resp.addProperty("message", "Server error");
             }
-            sendResponse(exchange, 200, gson.toJson(success ? "Login Successful" : "Invalid credentials"));
+            sendResponse(exchange, 200, gson.toJson(resp));
+        }
+    }
+
+    static class UploadHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                return;
+            }
+
+            try {
+                // 检查请求是否包含多部分内容
+                if (!ServletFileUpload.isMultipartContent(new HttpExchangeRequestContext(exchange))) {
+                    sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid request\"}");
+                    return;
+                }
+
+                // 配置文件上传处理
+                DiskFileItemFactory factory = new DiskFileItemFactory();
+                ServletFileUpload upload = new ServletFileUpload(factory);
+
+                // 解析请求
+                List<FileItem> items = upload.parseRequest(new HttpExchangeRequestContext(exchange));
+                String title = null, album = null, duration = null, uploaderId = null, uploaderName = null;
+                byte[] fileData = null;
+                String fileName = null;
+
+                for (FileItem item : items) {
+                    if (item.isFormField()) {
+                        // 处理表单字段
+                        switch (item.getFieldName()) {
+                            case "title": title = item.getString("UTF-8"); break;
+                            case "album": album = item.getString("UTF-8"); break;
+                            case "duration": duration = item.getString("UTF-8"); break;
+                            case "uploader_id": uploaderId = item.getString("UTF-8"); break;
+                            case "uploader_name": uploaderName = item.getString("UTF-8"); break;
+                        }
+                    } else {
+                        // 处理文件字段
+                        fileName = item.getName();
+                        fileData = item.get();
+                    }
+                }
+
+                // 保存文件
+                String savePath = "uploads/" + fileName;
+                try (FileOutputStream fos = new FileOutputStream(savePath)) {
+                    fos.write(fileData);
+                }
+
+                // 保存信息到数据库
+                int artistId = -1;
+                try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                    String queryArtistIdSql = "SELECT id FROM artists WHERE user_id = ?";
+                    try (PreparedStatement ps = conn.prepareStatement(queryArtistIdSql)) {
+                        ps.setInt(1, Integer.parseInt(uploaderId));
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                artistId = rs.getInt("id");
+                            } else {
+                                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Artist not found\"}");
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                    String sql = "INSERT INTO songs (title, album, duration, uploaded_by,  released_at, file_key) " +
+                            "VALUES (?, ?, ?, ?, now(), ?)";
+                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setString(1, title);
+                        ps.setString(2, album);
+                        ps.setString(3, duration);
+                        ps.setInt(4, artistId);
+                        ps.setString(5, savePath);
+                        ps.executeUpdate();
+                    }
+                }
+
+                sendResponse(exchange, 200, "{\"status\":\"success\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"" + e.getMessage() + "\"}");
+            }
         }
     }
 

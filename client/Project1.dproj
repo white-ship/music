@@ -133,6 +133,11 @@
             <Form>FormLogin</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="CurrentUser.pas"/>
+        <DCCReference Include="UploadDialog.pas">
+            <Form>FormUploadDialog</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -2,7 +2,7 @@ object FormLogin: TFormLogin
   Left = 0
   Top = 0
   Caption = #30331#24405
-  ClientHeight = 297
+  ClientHeight = 229
   ClientWidth = 621
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -57,18 +57,5 @@ object FormLogin: TFormLogin
     Caption = #30331#24405
     TabOrder = 3
     OnClick = BtnLoginClick
-  end
-  object MemoResponse: TMemo
-    Left = 0
-    Top = 215
-    Width = 621
-    Height = 82
-    Align = alBottom
-    ParentShowHint = False
-    ReadOnly = True
-    ShowHint = False
-    TabOrder = 4
-    StyleName = 'Windows'
-    ExplicitTop = 219
   end
 end
