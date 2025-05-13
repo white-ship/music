@@ -126,16 +126,11 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="MainForm.pas">
-            <Form>TformMain</Form>
+            <Form>FormMain</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="LoginForm.pas">
             <Form>FormLogin</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
-        <DCCReference Include="CurrentUser.pas"/>
-        <DCCReference Include="UploadDialog.pas">
-            <Form>FormUploadDialog</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

@@ -1,5 +1,6 @@
 package org.server;
 
+import com.google.gson.JsonArray;
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
@@ -13,6 +14,7 @@ import com.google.gson.Gson;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.sql.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,6 +29,8 @@ public class MusicAppServer {
         server.createContext("/register", new RegisterHandler());
         server.createContext("/login", new LoginHandler());
         server.createContext("/upload", new UploadHandler());
+        server.createContext("/music/list", new ListHandler());
+        server.createContext("/music/download", new DownloadHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -52,7 +56,7 @@ public class MusicAppServer {
     //创建数据库连接。
     public static Connection GetConnection(String username, String passwd) {
         String driver = "org.opengauss.Driver";
-        String sourceURL = "jdbc:opengauss://192.168.129.135:26000/music_sys";
+        String sourceURL = "jdbc:opengauss://192.168.129.135:26000/music_sys?characterEncoding=UTF-8&useUnicode=true\"";
         Connection conn = null;
         try {
             //加载数据库驱动。
@@ -228,8 +232,86 @@ public class MusicAppServer {
         }
     }
 
+    static class ListHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            JsonArray arr = new JsonArray();
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = "SELECT id, title, album, duration, uploaded_by FROM songs ORDER BY released_at";
+                try (Statement st = conn.createStatement();
+                     ResultSet rs = st.executeQuery(sql)) {
+                    while (rs.next()) {
+                        JsonObject obj = new JsonObject();
+                        obj.addProperty("id", rs.getInt("id"));
+                        obj.addProperty("title", rs.getString("title"));
+                        obj.addProperty("album", rs.getString("album"));
+                        obj.addProperty("duration", rs.getString("duration"));
+                        obj.addProperty("uploaded by", rs.getString("uploaded_by"));
+                        arr.add(obj);
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            sendResponse(exchange, 200, gson.toJson(arr));
+        }
+    }
+
+    static class DownloadHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            URI req = exchange.getRequestURI();
+            String query = req.getQuery(); // e.g. "id=3"
+            int id = Integer.parseInt(query.substring(query.indexOf('=') + 1));
+
+            String path = null, filename = null;
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = "SELECT file_key, title FROM songs WHERE id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, id);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            path = rs.getString("file_key");
+                            filename = rs.getString("title") + ExtractFileExt(path);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            if (path == null) {
+                exchange.sendResponseHeaders(404, -1);
+                return;
+            }
+
+            File file = new File(path);
+            exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+            exchange.getResponseHeaders().add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            exchange.sendResponseHeaders(200, file.length());
+            try (OutputStream os = exchange.getResponseBody();
+                 FileInputStream fis = new FileInputStream(file)) {
+                byte[] buf = new byte[8192];
+                int len;
+                while ((len = fis.read(buf)) > 0) {
+                    os.write(buf, 0, len);
+                }
+            }
+        }
+
+        private String ExtractFileExt(String fullpath) {
+            int i = fullpath.lastIndexOf('.');
+            return i >= 0 ? fullpath.substring(i) : "";
+        }
+    }
     private static void sendResponse(HttpExchange exchange, int statusCode, String response) throws IOException {
-        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
         byte[] bytes = response.getBytes("UTF-8");
         exchange.sendResponseHeaders(statusCode, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {

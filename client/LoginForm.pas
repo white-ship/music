@@ -73,10 +73,7 @@ begin
       begin
         AppUser.UserID := JsonResponse.GetValue<Integer>('userID');
         AppUser.Username := JsonResponse.GetValue<string>('username');
-
-        Hide;
-        Application.CreateForm(TFormMain, FormMain); // 创建主窗体
-        FormMain.Show;
+        ModalResult := mrOk;
       end
       else
       begin

@@ -87,13 +87,22 @@ object formMain: TformMain
       Height = 15
     end
     object btnUploadMusic: TButton
-      Left = 552
-      Top = 98
-      Width = 75
-      Height = 25
+      Left = 496
+      Top = 82
+      Width = 105
+      Height = 55
       Caption = #19978#20256#38899#20048
       TabOrder = 0
       OnClick = btnUploadMusicClick
+    end
+    object btnShowMusicList: TButton
+      Left = 496
+      Top = 208
+      Width = 105
+      Height = 57
+      Caption = #26597#30475#20840#37096#38899#20048
+      TabOrder = 1
+      OnClick = btnShowMusicListClick
     end
   end
   object pnlControls: TPanel

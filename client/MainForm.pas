@@ -7,7 +7,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.MPlayer, Vcl.Imaging.jpeg,CurrentUser, System.JSON,
   System.Net.HttpClient,System.Net.URLClient,IdHTTP, IdMultipartFormData,
-  UploadDialog;
+  UploadDialog,MusicListForm;
 
 type
     TString = class(TObject)
@@ -42,6 +42,7 @@ type
     lblUserInfoTitle: TLabel;
     lblUserInfo: TLabel;
     btnUploadMusic: TButton;
+    btnShowMusicList: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnAddSongClick(Sender: TObject);
@@ -55,6 +56,7 @@ type
     procedure Timer1Timer(Sender: TObject);
     procedure tbProgressChange(Sender: TObject);
     procedure btnUploadMusicClick(Sender: TObject);
+    procedure btnShowMusicListClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -254,6 +256,28 @@ begin
     FCurrentPosition := MediaPlayer1.Position; // 记录暂停位置
     MediaPlayer1.Pause;
     Timer1.Enabled := False;
+  end;
+end;
+
+procedure TformMain.btnShowMusicListClick(Sender: TObject);
+begin
+  FormMusicList := TFormMusicList.Create(nil);
+  try
+    // 手动初始化列表
+    FormMusicList.HTTP := THttpClient.Create;
+    FormMusicList.ListView1.ViewStyle := vsReport;
+    FormMusicList.ListView1.Columns.Clear;
+    FormMusicList.ListView1.Columns.Add.Caption := 'ID';
+    FormMusicList.ListView1.Columns.Add.Caption := '标题';
+    FormMusicList.ListView1.Columns.Add.Caption := '专辑';
+    FormMusicList.ListView1.Columns.Add.Caption := '时长';
+    FormMusicList.ListView1.Columns.Add.Caption := '音乐家id';
+    FormMusicList.LoadMusicList;
+    FormMusicList.Show;
+  except
+  FormMusicList.HTTP.Free;
+    FormMusicList.Free;
+    raise;
   end;
 end;
 
