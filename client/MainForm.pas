@@ -7,7 +7,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.MPlayer, Vcl.Imaging.jpeg,CurrentUser, System.JSON,
   System.Net.HttpClient,System.Net.URLClient,IdHTTP, IdMultipartFormData,
-  UploadDialog,MusicListForm;
+  UploadDialog,MusicListForm,UserManageForm;
 
 type
     TString = class(TObject)
@@ -43,6 +43,7 @@ type
     lblUserInfo: TLabel;
     btnUploadMusic: TButton;
     btnShowMusicList: TButton;
+    BtnUserManage: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnAddSongClick(Sender: TObject);
@@ -57,6 +58,8 @@ type
     procedure tbProgressChange(Sender: TObject);
     procedure btnUploadMusicClick(Sender: TObject);
     procedure btnShowMusicListClick(Sender: TObject);
+    procedure imgAlbumArtClick(Sender: TObject);
+    procedure BtnUserManageClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -85,6 +88,11 @@ begin
 end;
 
 procedure TformMain.FormCreate(Sender: TObject);
+var
+  Http: THttpClient;
+  Resp: IHTTPResponse;
+  JsonObj: TJSONObject;
+  isArtist: Boolean;
 begin
   // 初始化进度组件
   tbProgress.Min := 0;
@@ -103,6 +111,37 @@ begin
   // 初始化界面
   lstPlaylist.Items.Add('示例音乐1 - 艺术家1');imgAlbumArt.Picture.Assign(nil);
   CurrentTrackIndex := -1;
+
+    // 检查当前用户是否为音乐家
+  Http := THttpClient.Create;
+  try
+    Resp := Http.Get(Format('http://localhost:4567/user/isArtist?userId=%d', [AppUser.UserID]));
+    if Resp.StatusCode = 200 then
+    begin
+      JsonObj := TJSONObject.ParseJSONValue(Resp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+      try
+        isArtist := JsonObj.GetValue<Boolean>('isArtist');
+      finally
+        JsonObj.Free;
+      end;
+    end
+    else
+      isArtist := False;
+  finally
+    Http.Free;
+  end;
+
+  btnUploadMusic.Visible := isArtist or AppUser.IsAdmin;
+  BtnUserManage.Visible := AppUser.IsAdmin;
+end;
+
+//用户管理
+procedure TFormMain.BtnUserManageClick(Sender: TObject);
+begin
+  if AppUser.IsAdmin then
+    FormUserManage.ShowModal
+  else
+    ShowMessage('只有管理员可以访问用户管理功能');
 end;
 
 //添加
@@ -141,6 +180,11 @@ begin
     Result := TString(lstPlaylist.Items.Objects[Index]).Data
   else
     Result := '';
+end;
+
+procedure TformMain.imgAlbumArtClick(Sender: TObject);
+begin
+
 end;
 
 //删除
@@ -196,7 +240,7 @@ begin
       except
         imgAlbumArt.Picture.Assign(nil);
       end;
-      ShowMessage('播放失败: ' + E.Message);
+      ShowMessage('播放失败');
     end;
   end;
 end;
@@ -313,15 +357,16 @@ begin
         FormData.AddFormField('duration', FormUploadDialog.EditDuration.Text);
         FormData.AddFormField('uploader_id', IntToStr(AppUser.UserID));
         FormData.AddFormField('uploader_name', AppUser.Username);
-        FormData.AddFile('file', FormUploadDialog.EditFile.Text, 'audio/mpeg');
+        FormData.AddFile('file', UTF8Encode(FormUploadDialog.EditFile.Text), 'audio/mpeg');
 
         HTTP.Request.ContentType := FormData.RequestContentType;
         HTTP.Request.CharSet := 'utf-8';
 
-        ShowMessage('上传返回：' + HTTP.Post('http://localhost:4567/upload', FormData));
+        HTTP.Post('http://localhost:4567/upload', FormData);
+        ShowMessage('上传成功');
       except
         on E: Exception do
-          ShowMessage('上传失败: ' + E.Message);
+          ShowMessage('上传失败');
       end;
       HTTP.Free;
       FormData.Free;
@@ -349,7 +394,7 @@ begin
     MediaPlayer1.Notify := True;
   except
     on E: Exception do
-      ShowMessage('播放控制错误: ' + E.Message);
+      ShowMessage('播放控制错误');
   end;
 end;
 
@@ -384,7 +429,7 @@ begin
 
   except
     on E: Exception do
-      OutputDebugString(PChar('进度更新错误: ' + E.Message));
+      OutputDebugString(PChar('进度更新错误'));
   end;
 end;
 

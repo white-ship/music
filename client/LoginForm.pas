@@ -73,6 +73,7 @@ begin
       begin
         AppUser.UserID := JsonResponse.GetValue<Integer>('userID');
         AppUser.Username := JsonResponse.GetValue<string>('username');
+        AppUser.IsAdmin := JsonResponse.GetValue<Boolean>('isAdmin');
         ModalResult := mrOk;
       end
       else

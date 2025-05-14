@@ -6,6 +6,7 @@ type
   TCurrentUser = record
     UserID: Integer;
     Username: string;
+    IsAdmin: Boolean;
   end;
 
 var

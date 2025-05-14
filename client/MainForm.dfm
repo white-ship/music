@@ -65,13 +65,14 @@ object formMain: TformMain
     ExplicitWidth = 648
     ExplicitHeight = 552
     object imgAlbumArt: TImage
-      Left = 66
+      Left = 50
       Top = 82
       Width = 350
       Height = 350
       Center = True
       Proportional = True
       Stretch = True
+      OnClick = imgAlbumArtClick
     end
     object lblUserInfoTitle: TLabel
       Left = 20
@@ -103,6 +104,15 @@ object formMain: TformMain
       Caption = #26597#30475#20840#37096#38899#20048
       TabOrder = 1
       OnClick = btnShowMusicListClick
+    end
+    object BtnUserManage: TButton
+      Left = 496
+      Top = 344
+      Width = 105
+      Height = 49
+      Caption = #29992#25143#31649#29702
+      TabOrder = 2
+      OnClick = BtnUserManageClick
     end
   end
   object pnlControls: TPanel
