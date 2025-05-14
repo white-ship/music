@@ -163,6 +163,7 @@ begin
         Item.SubItems.Add(Obj.GetValue('album', '未知专辑'));
         Item.SubItems.Add(Obj.GetValue('duration', '未知时长'));
         Item.SubItems.Add(Obj.GetValue('uploaded by', '未知上传者'));
+        Item.SubItems.Add(Obj.GetValue('downloads', '0'));
       end;
     finally
       ListView1.Items.EndUpdate;
@@ -175,7 +176,8 @@ begin
       Columns[1].Width := Round(TotalWidth * 0.30); // 标题
       Columns[2].Width := Round(TotalWidth * 0.20); // 专辑
       Columns[3].Width := Round(TotalWidth * 0.10); // 时长
-      Columns[4].Width := Round(TotalWidth * 0.30); // 上传者
+      Columns[4].Width := Round(TotalWidth * 0.20); // 上传者
+      Columns[5].Width := Round(TotalWidth * 0.10); // 下载次数
     end;
 
     JsonArr.Free;
@@ -226,6 +228,7 @@ begin
         Resp.ContentStream.Position := 0;
         FileStream.CopyFrom(Resp.ContentStream, Resp.ContentStream.Size);
         ShowMessage('下载完成：' + SaveDialog.FileName);
+        LoadMusicList;
       finally
         FileStream.Free;
       end;

@@ -19,6 +19,7 @@ object formMain: TformMain
     Height = 560
     Align = alLeft
     TabOrder = 0
+    ExplicitHeight = 552
     object lblPlaylist: TLabel
       Left = 16
       Top = 16

@@ -339,6 +339,7 @@ begin
     FormMusicList.ListView1.Columns.Add.Caption := '专辑';
     FormMusicList.ListView1.Columns.Add.Caption := '时长';
     FormMusicList.ListView1.Columns.Add.Caption := '音乐家id';
+    FormMusicList.ListView1.Columns.Add.Caption := '下载次数';
     FormMusicList.IsFavoritesMode := False;
     FormMusicList.LoadMusicList;
     FormMusicList.Show;
@@ -497,6 +498,7 @@ begin
     FormMusicList.ListView1.Columns.Add.Caption := '专辑';
     FormMusicList.ListView1.Columns.Add.Caption := '时长';
     FormMusicList.ListView1.Columns.Add.Caption := '上传者';
+    FormMusicList.ListView1.Columns.Add.Caption := '下载次数';
     FormMusicList.IsFavoritesMode := True;
 
     // 请求收藏数据
@@ -528,6 +530,7 @@ begin
         Item.SubItems.Add(Obj.GetValue('album', '未知专辑'));
         Item.SubItems.Add(Obj.GetValue('duration', '未知时长'));
         Item.SubItems.Add(Obj.GetValue('uploaded_by', '未知上传者'));
+        Item.SubItems.Add(Obj.GetValue('downloads', '0'));
       end;
     finally
       FormMusicList.ListView1.Items.EndUpdate;

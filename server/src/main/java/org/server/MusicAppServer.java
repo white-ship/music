@@ -265,7 +265,7 @@ public class MusicAppServer {
 
             JsonArray arr = new JsonArray();
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
-                String sql = "SELECT id, title, album, duration, uploaded_by FROM songs ORDER BY released_at";
+                String sql = "SELECT id, title, album, duration, uploaded_by,downloads FROM songs ORDER BY downloads";
                 try (Statement st = conn.createStatement();
                      ResultSet rs = st.executeQuery(sql)) {
                     while (rs.next()) {
@@ -275,6 +275,7 @@ public class MusicAppServer {
                         obj.addProperty("album", rs.getString("album"));
                         obj.addProperty("duration", rs.getString("duration"));
                         obj.addProperty("uploaded by", rs.getString("uploaded_by"));
+                        obj.addProperty("downloads", rs.getInt("downloads"));
                         arr.add(obj);
                     }
                 }
@@ -294,9 +295,9 @@ public class MusicAppServer {
                 return;
             }
 
-            // 1. 解析 songId
+            // 解析 songId
             URI req = exchange.getRequestURI();
-            String query = req.getQuery();            // e.g. "id=3"
+            String query = req.getQuery(); // e.g. "id=3"
             int songId;
             try {
                 songId = Integer.parseInt(query.substring(query.indexOf('=') + 1));
@@ -305,7 +306,7 @@ public class MusicAppServer {
                 return;
             }
 
-            // 2. 从请求头获取 userId
+            // 从请求头获取 userId
             String userIdHeader = exchange.getRequestHeaders().getFirst("userId");
             int userId;
             try {
@@ -316,7 +317,7 @@ public class MusicAppServer {
             }
 
             String filePath = null, filename = null;
-            // 3. 查询文件路径和名称
+            // 查询文件路径和名称
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
                 String sql = "SELECT file_key, title FROM songs WHERE id = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -337,19 +338,33 @@ public class MusicAppServer {
                 return;
             }
 
-            // 4. 插入播放历史
+            // 插入播放历史并更新下载次数
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
-                String insertSql = "INSERT INTO history(user_id, song_id, played_at) VALUES(?, ?, now())";
-                try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                conn.setAutoCommit(false); // 开启事务
+
+                // 插入播放历史
+                String insertHistorySql = "INSERT INTO history(user_id, song_id, played_at) VALUES(?, ?, now())";
+                try (PreparedStatement ps = conn.prepareStatement(insertHistorySql)) {
                     ps.setInt(1, userId);
                     ps.setInt(2, songId);
                     ps.executeUpdate();
                 }
+
+                // 更新下载次数
+                String updateDownloadsSql = "UPDATE songs SET downloads = downloads + 1 WHERE id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateDownloadsSql)) {
+                    ps.setInt(1, songId);
+                    ps.executeUpdate();
+                }
+
+                conn.commit(); // 提交事务
             } catch (SQLException e) {
                 e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
             }
 
-            // 5. 发送文件
+            // 发送文件
             File file = new File(filePath);
             exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
             exchange.getResponseHeaders().add("Content-Disposition",
