@@ -99,23 +99,26 @@ public class MusicAppServer {
                 exchange.sendResponseHeaders(405, -1);
                 return;
             }
+
             String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody()))
                     .lines().collect(Collectors.joining("\n"));
             User u = gson.fromJson(body, User.class);
+
             try (Connection conn = MusicAppServer.GetConnection("myroot", "Lhx050918")) {
-                String sql = "INSERT INTO users(username, password, created_at) " +
-                        "VALUES(?, ?, now())";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, u.username);
-                    ps.setString(2, sha256(u.password));
-                    ps.executeUpdate();
+                String sql = "{ CALL add_user_with_default_role(?, ?, ?) }";
+                try (CallableStatement cs = conn.prepareCall(sql)) {
+                    cs.setString(1, u.username);
+                    cs.setString(2, sha256(u.password));
+                    cs.setString(3, "user");
+                    cs.execute();
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
-                sendResponse(exchange, 500, "error");
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
                 return;
             }
-            sendResponse(exchange, 200, gson.toJson("Registered"));
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"User registered with default role\"}");
         }
     }
 
@@ -823,7 +826,6 @@ public class MusicAppServer {
     static class HistoryHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // 只允许 GET
             if (!"GET".equals(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
                 return;
@@ -844,24 +846,20 @@ public class MusicAppServer {
 
             JsonArray arr = new JsonArray();
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
-                // 联表查询 song 信息
+                // 使用视图查询用户播放历史
                 String sql = """
-                SELECT h.id, h.played_at, s.id AS song_id, s.title, s.album, s.duration
-                  FROM history h
-                  JOIN songs s ON h.song_id = s.id
-                 WHERE h.user_id = ?
-                 ORDER BY h.played_at DESC
+                SELECT song_id, song_title, played_at
+                  FROM user_play_history
+                 WHERE user_id = ?
+                 ORDER BY played_at DESC
             """;
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, userId);
                     try (ResultSet rs = ps.executeQuery()) {
                         while (rs.next()) {
                             JsonObject obj = new JsonObject();
-                            obj.addProperty("historyId", rs.getInt("id"));
                             obj.addProperty("songId", rs.getInt("song_id"));
-                            obj.addProperty("title", rs.getString("title"));
-                            obj.addProperty("album", rs.getString("album"));
-                            obj.addProperty("duration", rs.getString("duration"));
+                            obj.addProperty("title", rs.getString("song_title"));
                             obj.addProperty("playedAt", rs.getTimestamp("played_at").toString());
                             arr.add(obj);
                         }
