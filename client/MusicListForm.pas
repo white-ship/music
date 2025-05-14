@@ -16,15 +16,19 @@ type
     EditSearch: TEdit;
     ButtonSearch: TButton;
     MunuItemFav: TMenuItem;
+    MenuItemRemoveFavorite: TMenuItem;
     procedure ListView1DblClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     procedure MenuItemDeleteClick(Sender: TObject);
     procedure ListView1ContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure ButtonSearchClick(Sender: TObject);
     procedure MenuItemAddFavoriteClick(Sender: TObject);
+    procedure MenuItemRemoveFavoriteClick(Sender: TObject);
   public
     HTTP: THttpClient;
+    IsFavoritesMode: Boolean;
     procedure DownloadByID(const ID: Integer; const Title: string);
     procedure LoadMusicList(const Keyword: string = '');
   end;
@@ -36,21 +40,30 @@ implementation
 
 {$R *.dfm}
 
+procedure TFormMusicList.FormShow(Sender: TObject);
+begin
+  MenuItemDelete.Visible := not IsFavoritesMode;
+  MunuItemFav.Visible := not IsFavoritesMode;
+  MenuItemRemoveFavorite.Visible := IsFavoritesMode;
+end;
+
+
 procedure TFormMusicList.FormCreate(Sender: TObject);
 begin
   HTTP := THttpClient.Create;
-  MenuItemDelete.Visible := False;
+  MenuItemRemoveFavorite.Visible := False;
 end;
 
 procedure TFormMusicList.ListView1ContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
 begin
-  if Assigned(ListView1.GetItemAt(MousePos.X, MousePos.Y)) and AppUser.IsAdmin then
-  begin
-    MenuItemDelete.Visible := True;
-    PopupMenu1.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y);
-  end
-  else
-    MenuItemDelete.Visible := False;
+  if not Assigned(ListView1.GetItemAt(MousePos.X, MousePos.Y)) then
+    Exit;
+
+  MenuItemDelete.Visible := AppUser.IsAdmin and (not IsFavoritesMode);
+  MunuItemFav.Visible := not IsFavoritesMode;
+  MenuItemRemoveFavorite.Visible := IsFavoritesMode;
+
+  PopupMenu1.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y);
 end;
 
 procedure TFormMusicList.MenuItemDeleteClick(Sender: TObject);
@@ -104,13 +117,25 @@ var
   Item: TListItem;
   I: Integer;
   URL: string;
+  TotalWidth: Integer;
 begin
   try
-    if Keyword.Trim = '' then
-      URL := 'http://localhost:4567/music/list'
-    else
-      URL := 'http://localhost:4567/music/search?keyword=' + TNetEncoding.URL.Encode(Keyword);
+     try
+      if IsFavoritesMode then
+      begin
+        // 收藏模式：从收藏接口获取
+        URL := Format('http://localhost:4567/favorites/list?userId=%d', [AppUser.UserID]);
+      end
+      else
+      begin
+        if Keyword.Trim = '' then
+          URL := 'http://localhost:4567/music/list'
+        else
+          URL := 'http://localhost:4567/music/search?keyword=' + TNetEncoding.URL.Encode(Keyword);
+      end;
+       finally
 
+     end;
     Resp := HTTP.Get(URL);
     RespText := Resp.ContentAsString(TEncoding.UTF8);
 
@@ -133,7 +158,7 @@ begin
 
         Obj := JsonArr.Items[I] as TJSONObject;
         Item := ListView1.Items.Add;
-        Item.Caption := Obj.GetValue('id', '0');  // 默认值
+        Item.Caption := Obj.GetValue('id', '0');
         Item.SubItems.Add(Obj.GetValue('title', '未知标题'));
         Item.SubItems.Add(Obj.GetValue('album', '未知专辑'));
         Item.SubItems.Add(Obj.GetValue('duration', '未知时长'));
@@ -143,14 +168,14 @@ begin
       ListView1.Items.EndUpdate;
     end;
 
-    // 自动调整列宽
+    TotalWidth := ListView1.ClientWidth;
     with ListView1 do
     begin
-      Columns[0].Width := -1;
-      Columns[1].Width := -2;
-      Columns[2].Width := -2;
-      Columns[3].Width := -1;
-      Columns[4].Width := -2;
+      Columns[0].Width := Round(TotalWidth * 0.10); // ID
+      Columns[1].Width := Round(TotalWidth * 0.30); // 标题
+      Columns[2].Width := Round(TotalWidth * 0.20); // 专辑
+      Columns[3].Width := Round(TotalWidth * 0.10); // 时长
+      Columns[4].Width := Round(TotalWidth * 0.30); // 上传者
     end;
 
     JsonArr.Free;
@@ -160,12 +185,10 @@ begin
   end;
 end;
 
-
 procedure TFormMusicList.ButtonSearchClick(Sender: TObject);
 begin
   LoadMusicList(EditSearch.Text);
 end;
-
 
 procedure TFormMusicList.ListView1DblClick(Sender: TObject);
 var
@@ -245,6 +268,41 @@ begin
       ShowMessage('收藏成功')
     else
       ShowMessage('收藏失败：' + RespText);
+  finally
+    JSON.Free;
+  end;
+end;
+
+procedure TFormMusicList.MenuItemRemoveFavoriteClick(Sender: TObject);
+var
+  ID: Integer;
+  URL, RespText: string;
+  JSON: TJSONObject;
+  Resp: IHTTPResponse;
+begin
+  if not Assigned(ListView1.Selected) then Exit;
+
+  ID := StrToInt(ListView1.Selected.Caption);
+  URL := 'http://localhost:4567/favorites/remove';
+
+  HTTP.CustomHeaders['Content-Type'] := 'application/json';
+  JSON := TJSONObject.Create;
+  try
+    JSON.AddPair('userId', TJSONNumber.Create(AppUser.UserID));
+    JSON.AddPair('songId', TJSONNumber.Create(ID));
+
+    Resp := HTTP.Post(URL, TStringStream.Create(JSON.ToString, TEncoding.UTF8));
+    RespText := Resp.ContentAsString(TEncoding.UTF8);
+
+    if Resp.StatusCode = 200 then
+    begin
+      ShowMessage('已从收藏中移除');
+      // 重新加载收藏列表
+      if IsFavoritesMode then
+        LoadMusicList;
+    end
+    else
+      ShowMessage('移除失败：' + RespText);
   finally
     JSON.Free;
   end;

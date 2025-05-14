@@ -1,4 +1,4 @@
-unit HistoryForm;
+﻿unit HistoryForm;
 
 interface
 
@@ -34,10 +34,10 @@ begin
   begin
     Clear;
     Add.Caption := 'ID';         // history id
-    Add.Caption := '歌曲';
-    Add.Caption := '专辑';
-    Add.Caption := '时长';
-    Add.Caption := '下载时间';
+    Add.Caption := 'songs';
+    Add.Caption := 'album';
+    Add.Caption := 'duration';
+    Add.Caption := 'download at';
   end;
   ListViewHistory.ViewStyle := vsReport;
   LoadHistory;

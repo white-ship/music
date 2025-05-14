@@ -1,4 +1,4 @@
-unit MainForm;
+ï»¿unit MainForm;
 
 interface
 
@@ -27,11 +27,11 @@ type
     lblTotalTime: TLabel;
     Timer1: TTimer;
 
-    // ÖĞÑë×¨¼­·âÃæÃæ°å
+    // ä¸­å¤®ä¸“è¾‘å°é¢é¢æ¿
     pnlAlbumArt: TPanel;
     imgAlbumArt: TImage;
 
-    // µ×²¿¿ØÖÆÃæ°å
+    // åº•éƒ¨æ§åˆ¶é¢æ¿
     pnlControls: TPanel;
     btnPlay: TButton;
     btnPause: TButton;
@@ -116,25 +116,25 @@ var
   JsonObj: TJSONObject;
   isArtist: Boolean;
 begin
-  // ³õÊ¼»¯½ø¶È×é¼ş
+  // åˆå§‹åŒ–è¿›åº¦ç»„ä»¶
   tbProgress.Min := 0;
   tbProgress.Max := 100;
   tbProgress.Position := 0;
   lblCurrentTime.Caption := '00:00';
   lblTotalTime.Caption := '00:00';
 
-  // ÏÔÊ¾ÓÃ»§ĞÅÏ¢
-  lblUserInfo.Caption := Format('ÓÃ»§Ãû: %s, ID: %d', [AppUser.Username, AppUser.UserID]);
+  // æ˜¾ç¤ºç”¨æˆ·ä¿¡æ¯
+  lblUserInfo.Caption := Format('ç”¨æˆ·å: %s, ID: %d', [AppUser.Username, AppUser.UserID]);
 
-  // ³õÊ¼»¯¶¨Ê±Æ÷
-  Timer1.Interval := 500; // Ã¿500ºÁÃë¸üĞÂÒ»´Î
+  // åˆå§‹åŒ–å®šæ—¶å™¨
+  Timer1.Interval := 500; // æ¯500æ¯«ç§’æ›´æ–°ä¸€æ¬¡
   Timer1.Enabled := False;
 
-  // ³õÊ¼»¯½çÃæ
-  lstPlaylist.Items.Add('Ê¾ÀıÒôÀÖ1 - ÒÕÊõ¼Ò1');imgAlbumArt.Picture.Assign(nil);
+  // åˆå§‹åŒ–ç•Œé¢
+  lstPlaylist.Items.Add('ç¤ºä¾‹éŸ³ä¹1 - è‰ºæœ¯å®¶1');imgAlbumArt.Picture.Assign(nil);
   CurrentTrackIndex := -1;
 
-    // ¼ì²éµ±Ç°ÓÃ»§ÊÇ·ñÎªÒôÀÖ¼Ò
+    // æ£€æŸ¥å½“å‰ç”¨æˆ·æ˜¯å¦ä¸ºéŸ³ä¹å®¶
   Http := THttpClient.Create;
   try
     Resp := Http.Get(Format('http://localhost:4567/user/isArtist?userId=%d', [AppUser.UserID]));
@@ -158,16 +158,16 @@ begin
   ButtonFavorites.OnClick := ButtonFavoritesClick;
 end;
 
-//ÓÃ»§¹ÜÀí
+//ç”¨æˆ·ç®¡ç†
 procedure TFormMain.BtnUserManageClick(Sender: TObject);
 begin
   if AppUser.IsAdmin then
     FormUserManage.ShowModal
   else
-    ShowMessage('Ö»ÓĞ¹ÜÀíÔ±¿ÉÒÔ·ÃÎÊÓÃ»§¹ÜÀí¹¦ÄÜ');
+    ShowMessage('åªæœ‰ç®¡ç†å‘˜å¯ä»¥è®¿é—®ç”¨æˆ·ç®¡ç†åŠŸèƒ½');
 end;
 
-//Ìí¼Ó
+//æ·»åŠ 
 procedure TformMain.btnAddSongClick(Sender: TObject);
 var
   i: Integer;
@@ -179,17 +179,17 @@ begin
   begin
     lstPlaylist.Items.BeginUpdate;
     try
-      // ±éÀúËùÓĞÑ¡ÖĞÎÄ¼ş
+      // éå†æ‰€æœ‰é€‰ä¸­æ–‡ä»¶
       for i := 0 to OpenDialog1.Files.Count - 1 do
       begin
-        // ÌáÈ¡´¿ÎÄ¼şÃû£¨²»´øÀ©Õ¹Ãû£©
+        // æå–çº¯æ–‡ä»¶åï¼ˆä¸å¸¦æ‰©å±•åï¼‰
         FileName := ChangeFileExt(ExtractFileName(OpenDialog1.Files[i]), '');
 
-        // ½«ÍêÕûÂ·¾¶´æ´¢µ½ObjectÊôĞÔ£¬ÏÔÊ¾ÃÀ»¯ºóµÄÎÄ¼şÃû
+        // å°†å®Œæ•´è·¯å¾„å­˜å‚¨åˆ°Objectå±æ€§ï¼Œæ˜¾ç¤ºç¾åŒ–åçš„æ–‡ä»¶å
         lstPlaylist.Items.AddObject(FileName, TString.Create(OpenDialog1.Files[i]));
       end;
 
-      // ×Ô¶¯ÅÅĞò£¨¿ÉÑ¡£©
+      // è‡ªåŠ¨æ’åºï¼ˆå¯é€‰ï¼‰
       lstPlaylist.Sorted := True;
     finally
       lstPlaylist.Items.EndUpdate;
@@ -210,7 +210,7 @@ begin
 
 end;
 
-//É¾³ı
+//åˆ é™¤
 procedure TformMain.btnRemoveSongClick(Sender: TObject);
 begin
   if lstPlaylist.ItemIndex <> -1 then
@@ -220,13 +220,13 @@ begin
   end;
 end;
 
-//Ë«»÷²¥·ÅÁĞ±í
+//åŒå‡»æ’­æ”¾åˆ—è¡¨
 procedure TformMain.lstPlaylistDblClick(Sender: TObject);
 const
   DEFAULT_ALBUM = 'Images\default_album.jpg';
   ERROR_ALBUM = 'Images\error_album.jpg';
 begin
-  // ËùÓĞÇé¿öÏÈÏÔÊ¾Ä¬ÈÏ·âÃæ
+  // æ‰€æœ‰æƒ…å†µå…ˆæ˜¾ç¤ºé»˜è®¤å°é¢
   try
     imgAlbumArt.Picture.LoadFromFile(DEFAULT_ALBUM);
   except
@@ -235,11 +235,11 @@ begin
 
   if lstPlaylist.ItemIndex = -1 then Exit;
 
-  // Ê¾ÀıÒôÀÖ²»Ö´ĞĞ²¥·Å²Ù×÷
-  if Pos('Ê¾ÀıÒôÀÖ', lstPlaylist.Items[lstPlaylist.ItemIndex]) > 0 then
+  // ç¤ºä¾‹éŸ³ä¹ä¸æ‰§è¡Œæ’­æ”¾æ“ä½œ
+  if Pos('ç¤ºä¾‹éŸ³ä¹', lstPlaylist.Items[lstPlaylist.ItemIndex]) > 0 then
     Exit;
 
-  // ÕæÊµÇúÄ¿²¥·Å´¦Àí
+  // çœŸå®æ›²ç›®æ’­æ”¾å¤„ç†
   try
     if (CurrentTrackIndex <> lstPlaylist.ItemIndex) or not FIsTrackLoaded then
     begin
@@ -263,7 +263,7 @@ begin
       except
         imgAlbumArt.Picture.Assign(nil);
       end;
-      ShowMessage('²¥·ÅÊ§°Ü');
+      ShowMessage('æ’­æ”¾å¤±è´¥');
     end;
   end;
 end;
@@ -279,7 +279,7 @@ begin
     MediaPlayer1.FileName := RealPath;
     MediaPlayer1.Open;
 
-    // ³õÊ¼»¯½ø¶ÈÌõ
+    // åˆå§‹åŒ–è¿›åº¦æ¡
     tbProgress.Position := 0;
     tbProgress.Max := MediaPlayer1.Length;
     Timer1.Enabled := True;
@@ -294,12 +294,12 @@ begin
 end;
 
 
-//ÔİÍ££¬²¥·Å£¬Í£Ö¹
+//æš‚åœï¼Œæ’­æ”¾ï¼Œåœæ­¢
 procedure TformMain.btnPlayClick(Sender: TObject);
 begin
   if lstPlaylist.ItemIndex = -1 then Exit;
 
-  // Èç¹ûÎ´¼ÓÔØ»òÇĞ»»ÁËÇúÄ¿
+  // å¦‚æœæœªåŠ è½½æˆ–åˆ‡æ¢äº†æ›²ç›®
   if not FIsTrackLoaded or (CurrentTrackIndex <> lstPlaylist.ItemIndex) then
   begin
     LoadTrack(lstPlaylist.ItemIndex);
@@ -308,7 +308,7 @@ begin
   end
   else if MediaPlayer1.Mode = mpPaused then
   begin
-    // ´ÓÔİÍ£Î»ÖÃ¼ÌĞø²¥·Å
+    // ä»æš‚åœä½ç½®ç»§ç»­æ’­æ”¾
     MediaPlayer1.Position := FCurrentPosition;
   end;
 
@@ -320,7 +320,7 @@ procedure TformMain.btnPauseClick(Sender: TObject);
 begin
   if MediaPlayer1.Mode = mpPlaying then
   begin
-    FCurrentPosition := MediaPlayer1.Position; // ¼ÇÂ¼ÔİÍ£Î»ÖÃ
+    FCurrentPosition := MediaPlayer1.Position; // è®°å½•æš‚åœä½ç½®
     MediaPlayer1.Pause;
     Timer1.Enabled := False;
   end;
@@ -330,15 +330,16 @@ procedure TformMain.btnShowMusicListClick(Sender: TObject);
 begin
   FormMusicList := TFormMusicList.Create(nil);
   try
-    // ÊÖ¶¯³õÊ¼»¯ÁĞ±í
+    // æ‰‹åŠ¨åˆå§‹åŒ–åˆ—è¡¨
     FormMusicList.HTTP := THttpClient.Create;
     FormMusicList.ListView1.ViewStyle := vsReport;
     FormMusicList.ListView1.Columns.Clear;
     FormMusicList.ListView1.Columns.Add.Caption := 'ID';
-    FormMusicList.ListView1.Columns.Add.Caption := '±êÌâ';
-    FormMusicList.ListView1.Columns.Add.Caption := '×¨¼­';
-    FormMusicList.ListView1.Columns.Add.Caption := 'Ê±³¤';
-    FormMusicList.ListView1.Columns.Add.Caption := 'ÒôÀÖ¼Òid';
+    FormMusicList.ListView1.Columns.Add.Caption := 'æ ‡é¢˜';
+    FormMusicList.ListView1.Columns.Add.Caption := 'ä¸“è¾‘';
+    FormMusicList.ListView1.Columns.Add.Caption := 'æ—¶é•¿';
+    FormMusicList.ListView1.Columns.Add.Caption := 'éŸ³ä¹å®¶id';
+    FormMusicList.IsFavoritesMode := False;
     FormMusicList.LoadMusicList;
     FormMusicList.Show;
   except
@@ -367,11 +368,11 @@ begin
     begin
       if not FileExists(FormUploadDialog.EditFile.Text) then
       begin
-        ShowMessage('ÇëÑ¡ÔñÓĞĞ§µÄÒôÀÖÎÄ¼ş');
+        ShowMessage('è¯·é€‰æ‹©æœ‰æ•ˆçš„éŸ³ä¹æ–‡ä»¶');
         Exit;
       end;
 
-      // ´´½¨ÉÏ´«ÇëÇó
+      // åˆ›å»ºä¸Šä¼ è¯·æ±‚
       HTTP := TIdHTTP.Create(nil);
       FormData := TIdMultiPartFormDataStream.Create;
       try
@@ -386,10 +387,10 @@ begin
         HTTP.Request.CharSet := 'utf-8';
 
         HTTP.Post('http://localhost:4567/upload', FormData);
-        ShowMessage('ÉÏ´«³É¹¦');
+        ShowMessage('ä¸Šä¼ æˆåŠŸ');
       except
         on E: Exception do
-          ShowMessage('ÉÏ´«Ê§°Ü');
+          ShowMessage('ä¸Šä¼ å¤±è´¥');
       end;
       HTTP.Free;
       FormData.Free;
@@ -399,7 +400,7 @@ begin
   end;
 end;
 
-//×Ô¶¯Á¬Ğø²¥·Å
+//è‡ªåŠ¨è¿ç»­æ’­æ”¾
 procedure TformMain.MediaPlayer1Notify(Sender: TObject);
 begin
   try
@@ -417,7 +418,7 @@ begin
     MediaPlayer1.Notify := True;
   except
     on E: Exception do
-      ShowMessage('²¥·Å¿ØÖÆ´íÎó');
+      ShowMessage('æ’­æ”¾æ§åˆ¶é”™è¯¯');
   end;
 end;
 
@@ -433,17 +434,17 @@ var
   TotalMin, TotalSec: Integer;
 begin
   try
-    // ÉèÖÃ½ø¶ÈÌõ·¶Î§
+    // è®¾ç½®è¿›åº¦æ¡èŒƒå›´
     if tbProgress.Max <> MediaPlayer1.Length then
     begin
       tbProgress.Min := 0;
       tbProgress.Max := MediaPlayer1.Length;
     end;
 
-    // ¸üĞÂµ±Ç°Î»ÖÃ
+    // æ›´æ–°å½“å‰ä½ç½®
     tbProgress.Position := MediaPlayer1.Position;
 
-    // ¸ñÊ½»¯Ê±¼äÏÔÊ¾
+    // æ ¼å¼åŒ–æ—¶é—´æ˜¾ç¤º
     FormatTimeLabel(MediaPlayer1.Position div 1000, CurrentMin, CurrentSec);
     FormatTimeLabel(MediaPlayer1.Length div 1000, TotalMin, TotalSec);
 
@@ -452,7 +453,7 @@ begin
 
   except
     on E: Exception do
-      OutputDebugString(PChar('½ø¶È¸üĞÂ´íÎó'));
+      OutputDebugString(PChar('è¿›åº¦æ›´æ–°é”™è¯¯'));
   end;
 end;
 
@@ -484,31 +485,32 @@ var
   I: Integer;
   URL: string;
 begin
-  // ´´½¨ÒôÀÖÁĞ±í´°¿Ú
+  // åˆ›å»ºéŸ³ä¹åˆ—è¡¨çª—å£
   FormMusicList := TFormMusicList.Create(nil);
   try
-    // ³õÊ¼»¯ HTTP ºÍÁĞ±íÑùÊ½
+    // åˆå§‹åŒ– HTTP å’Œåˆ—è¡¨æ ·å¼
     FormMusicList.HTTP := THttpClient.Create;
     FormMusicList.ListView1.ViewStyle := vsReport;
     FormMusicList.ListView1.Columns.Clear;
     FormMusicList.ListView1.Columns.Add.Caption := 'ID';
-    FormMusicList.ListView1.Columns.Add.Caption := '±êÌâ';
-    FormMusicList.ListView1.Columns.Add.Caption := '×¨¼­';
-    FormMusicList.ListView1.Columns.Add.Caption := 'Ê±³¤';
-    FormMusicList.ListView1.Columns.Add.Caption := 'ÉÏ´«Õß';
+    FormMusicList.ListView1.Columns.Add.Caption := 'æ ‡é¢˜';
+    FormMusicList.ListView1.Columns.Add.Caption := 'ä¸“è¾‘';
+    FormMusicList.ListView1.Columns.Add.Caption := 'æ—¶é•¿';
+    FormMusicList.ListView1.Columns.Add.Caption := 'ä¸Šä¼ è€…';
+    FormMusicList.IsFavoritesMode := True;
 
-    // ÇëÇóÊÕ²ØÊı¾İ
+    // è¯·æ±‚æ”¶è—æ•°æ®
     URL := Format('http://localhost:4567/favorites/list?userId=%d', [AppUser.UserID]);
     Resp := FormMusicList.HTTP.Get(URL);
     RespText := Resp.ContentAsString(TEncoding.UTF8);
 
     if Resp.StatusCode <> 200 then
     begin
-      ShowMessage('¼ÓÔØÊÕ²ØÊ§°Ü£º' + Resp.StatusCode.ToString);
+      ShowMessage('åŠ è½½æ”¶è—å¤±è´¥ï¼š' + Resp.StatusCode.ToString);
       Exit;
     end;
 
-    // ½âÎö JSON ²¢Ìî³äÁĞ±í
+    // è§£æ JSON å¹¶å¡«å……åˆ—è¡¨
     JsonVal := TJSONObject.ParseJSONValue(RespText);
     JsonArr := JsonVal as TJSONArray;
 
@@ -522,18 +524,31 @@ begin
         Obj := JsonArr.Items[I] as TJSONObject;
         Item := FormMusicList.ListView1.Items.Add;
         Item.Caption := Obj.GetValue('id', '0');
-        Item.SubItems.Add(Obj.GetValue('title', 'Î´Öª±êÌâ'));
-        Item.SubItems.Add(Obj.GetValue('album', 'Î´Öª×¨¼­'));
-        Item.SubItems.Add(Obj.GetValue('duration', 'Î´ÖªÊ±³¤'));
-        Item.SubItems.Add(Obj.GetValue('uploaded_by', 'Î´ÖªÉÏ´«Õß')); // ×¢Òâ×Ö¶ÎÃûÒªÆ¥Åäºó¶Ë
+        Item.SubItems.Add(Obj.GetValue('title', 'æœªçŸ¥æ ‡é¢˜'));
+        Item.SubItems.Add(Obj.GetValue('album', 'æœªçŸ¥ä¸“è¾‘'));
+        Item.SubItems.Add(Obj.GetValue('duration', 'æœªçŸ¥æ—¶é•¿'));
+        Item.SubItems.Add(Obj.GetValue('uploaded_by', 'æœªçŸ¥ä¸Šä¼ è€…'));
       end;
     finally
       FormMusicList.ListView1.Items.EndUpdate;
     end;
 
+    var
+      TotalWidth: Integer;
+    begin
+      TotalWidth := FormMusicList.ListView1.ClientWidth;
+      with FormMusicList.ListView1 do
+      begin
+        Columns[0].Width := Round(TotalWidth * 0.10);
+        Columns[1].Width := Round(TotalWidth * 0.30);
+        Columns[2].Width := Round(TotalWidth * 0.20);
+        Columns[3].Width := Round(TotalWidth * 0.10);
+        Columns[4].Width := Round(TotalWidth * 0.30);
+      end;
+    end;
+
     JsonArr.Free;
 
-    // ÏÔÊ¾´°¿Ú
     FormMusicList.Show;
   except
     on E: Exception do
@@ -541,7 +556,7 @@ begin
       if Assigned(FormMusicList.HTTP) then
         FormMusicList.HTTP.Free;
       FormMusicList.Free;
-      ShowMessage('·¢Éú´íÎó£º' + E.Message);
+      ShowMessage('å‘ç”Ÿé”™è¯¯ï¼š' + E.Message);
     end;
   end;
 end;

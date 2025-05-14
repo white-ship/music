@@ -44,6 +44,7 @@ public class MusicAppServer {
         server.createContext("/history", new HistoryHandler());
         server.createContext("/favorites/list", new FavoritesListHandler());
         server.createContext("/favorites/add", new FavoritesAddHandler());
+        server.createContext("/favorites/remove", new FavoritesRemoveHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -950,6 +951,51 @@ public class MusicAppServer {
             }
 
             sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Favorite added\"}");
+        }
+    }
+
+    static class FavoritesRemoveHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            // 解析请求体
+            String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
+                    .lines().collect(Collectors.joining("\n"));
+            JsonObject requestJson;
+            int userId, songId;
+
+            try {
+                requestJson = JsonParser.parseString(body).getAsJsonObject();
+                userId = requestJson.get("userId").getAsInt();
+                songId = requestJson.get("songId").getAsInt();
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid JSON format\"}");
+                return;
+            }
+
+            // 删除收藏记录
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = "DELETE FROM favorites WHERE user_id = ? AND song_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, songId);
+                    int rowsAffected = ps.executeUpdate();
+                    if (rowsAffected == 0) {
+                        sendResponse(exchange, 404, "{\"status\":\"error\",\"message\":\"Favorite not found\"}");
+                        return;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Favorite removed\"}");
         }
     }
 

@@ -10,6 +10,7 @@ object FormMusicList: TFormMusicList
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OnShow = FormShow
   TextHeight = 15
   object ListView1: TListView
     Left = 32
@@ -40,6 +41,10 @@ object FormMusicList: TFormMusicList
   object PopupMenu1: TPopupMenu
     Left = 152
     Top = 184
+    object MenuItemRemoveFavorite: TMenuItem
+      Caption = #21462#28040#25910#34255
+      OnClick = MenuItemRemoveFavoriteClick
+    end
     object MunuItemFav: TMenuItem
       Caption = #25910#34255#38899#20048
       OnClick = MenuItemAddFavoriteClick
