@@ -193,6 +193,7 @@ begin
     if not SaveDialog.Execute then Exit;
 
     URL := Format('http://localhost:4567/music/download?id=%d', [ID]);
+    HTTP.CustomHeaders['userId'] := IntToStr(AppUser.UserID);
     Resp := HTTP.Get(URL);
     if Resp.StatusCode = 200 then
     begin

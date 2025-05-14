@@ -7,7 +7,8 @@ uses
   CurrentUser in 'CurrentUser.pas',
   MusicListForm in 'MusicListForm.pas' {FormMusicList},
   UploadDialog in 'UploadDialog.pas' {FormUploadDialog},
-  UserManageForm in 'UserManageForm.pas' {FormUserManage};
+  UserManageForm in 'UserManageForm.pas' {FormUserManage},
+  HistoryForm in 'HistoryForm.pas' {FormHistory};
 
 {$R *.res}
 begin
@@ -19,9 +20,10 @@ begin
     if ShowModal = mrOk then
     begin
       Application.CreateForm(TFormMain, FormMain);
-      Application.CreateForm(TFormMusicList, FormMusicList);
-      Application.CreateForm(TFormUploadDialog, FormUploadDialog);
-      if AppUser.IsAdmin then
+  Application.CreateForm(TFormMusicList, FormMusicList);
+  Application.CreateForm(TFormUploadDialog, FormUploadDialog);
+  Application.CreateForm(TFormHistory, FormHistory);
+  if AppUser.IsAdmin then
       begin
         Application.CreateForm(TFormUserManage, FormUserManage);
       end;

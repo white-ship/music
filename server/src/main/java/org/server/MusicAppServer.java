@@ -37,8 +37,11 @@ public class MusicAppServer {
         server.createContext("/users/list", new UserListHandler());
         server.createContext("/users/delete", new UserDeleteHandler());
         server.createContext("/users/set_admin", new SetAdminHandler());
+        server.createContext("/users/set_artist", new SetArtistHandler());
         server.createContext("/users/remove_admin", new RemoveAdminHandler());
+        server.createContext("/users/remove_artist", new RemoveArtistHandler());
         server.createContext("/music/search", new SearchHandler());
+        server.createContext("/history", new HistoryHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -283,19 +286,42 @@ public class MusicAppServer {
     static class DownloadHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            URI req = exchange.getRequestURI();
-            String query = req.getQuery(); // e.g. "id=3"
-            int id = Integer.parseInt(query.substring(query.indexOf('=') + 1));
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
 
-            String path = null, filename = null;
+            // 1. 解析 songId
+            URI req = exchange.getRequestURI();
+            String query = req.getQuery();            // e.g. "id=3"
+            int songId;
+            try {
+                songId = Integer.parseInt(query.substring(query.indexOf('=') + 1));
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid id\"}");
+                return;
+            }
+
+            // 2. 从请求头获取 userId
+            String userIdHeader = exchange.getRequestHeaders().getFirst("userId");
+            int userId;
+            try {
+                userId = Integer.parseInt(userIdHeader);
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Missing or invalid userId\"}");
+                return;
+            }
+
+            String filePath = null, filename = null;
+            // 3. 查询文件路径和名称
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
                 String sql = "SELECT file_key, title FROM songs WHERE id = ?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt(1, id);
+                    ps.setInt(1, songId);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
-                            path = rs.getString("file_key");
-                            filename = rs.getString("title") + ExtractFileExt(path);
+                            filePath = rs.getString("file_key");
+                            filename = rs.getString("title") + extractFileExt(filePath);
                         }
                     }
                 }
@@ -303,14 +329,28 @@ public class MusicAppServer {
                 e.printStackTrace();
             }
 
-            if (path == null) {
+            if (filePath == null) {
                 exchange.sendResponseHeaders(404, -1);
                 return;
             }
 
-            File file = new File(path);
-            exchange.getResponseHeaders().add("Content-Type", "application/octet-stream; charset=UTF-8");
-            exchange.getResponseHeaders().add("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            // 4. 插入播放历史
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String insertSql = "INSERT INTO history(user_id, song_id, played_at) VALUES(?, ?, now())";
+                try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, songId);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            // 5. 发送文件
+            File file = new File(filePath);
+            exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
+            exchange.getResponseHeaders().add("Content-Disposition",
+                    "attachment; filename=\"" + filename + "\"");
             exchange.sendResponseHeaders(200, file.length());
             try (OutputStream os = exchange.getResponseBody();
                  FileInputStream fis = new FileInputStream(file)) {
@@ -322,11 +362,12 @@ public class MusicAppServer {
             }
         }
 
-        private String ExtractFileExt(String fullpath) {
+        private String extractFileExt(String fullpath) {
             int i = fullpath.lastIndexOf('.');
             return i >= 0 ? fullpath.substring(i) : "";
         }
     }
+
 
     static class IsArtistHandler implements HttpHandler {
         @Override
@@ -341,7 +382,11 @@ public class MusicAppServer {
 
             boolean isArtist = false;
             try (Connection conn = GetConnection("myroot", "Lhx050918")) {
-                String sql = "SELECT count(*) FROM artists WHERE user_id = ?";
+                String sql = """
+                    SELECT count(*) FROM user_roles
+                    JOIN roles ON user_roles.role_id = roles.id
+                    WHERE user_id = ? AND roles.name='artist'
+                    """;
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, userId);
                     try (ResultSet rs = ps.executeQuery()) {
@@ -475,7 +520,12 @@ public class MusicAppServer {
                          SELECT 1 FROM user_roles ur
                          JOIN roles r ON ur.role_id = r.id
                          WHERE ur.user_id = u.id AND r.name = 'admin'
-                       ) AS is_admin
+                       ) AS is_admin,
+                        EXISTS(
+                         SELECT 1 FROM user_roles ur
+                         JOIN roles r ON ur.role_id = r.id
+                         WHERE ur.user_id = u.id AND r.name = 'artist'
+                        ) AS is_artist
                 FROM users u
             """;
                 try (Statement st = conn.createStatement();
@@ -485,6 +535,7 @@ public class MusicAppServer {
                         user.addProperty("id", rs.getInt("id"));
                         user.addProperty("username", rs.getString("username"));
                         user.addProperty("is_admin", rs.getBoolean("is_admin"));
+                        user.addProperty("is_artist", rs.getBoolean("is_artist"));
                         users.add(user);
                     }
                 }
@@ -581,6 +632,47 @@ public class MusicAppServer {
         }
     }
 
+    static class SetArtistHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String query = exchange.getRequestURI().getQuery();
+            if (query == null || !query.startsWith("userId=")) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Missing or invalid id parameter\"}");
+                return;
+            }
+
+            int userId;
+            try {
+                userId = Integer.parseInt(query.split("=")[1]);
+            } catch (NumberFormatException e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid id format\"}");
+                return;
+            }
+
+            try (Connection conn = MusicAppServer.GetConnection("myroot", "Lhx050918")) {
+                String sql = """
+                INSERT INTO artists (user_id)
+                SELECT id FROM users u WHERE u.id = ?
+            """;
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Admin role granted\"}");
+        }
+    }
+
     static class RemoveAdminHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
@@ -607,6 +699,47 @@ public class MusicAppServer {
                 String sql = """
                 DELETE FROM user_roles
                 WHERE user_id = ? AND role_id = (SELECT id FROM roles WHERE name = 'admin')
+            """;
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Admin role removed\"}");
+        }
+    }
+
+    static class RemoveArtistHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String query = exchange.getRequestURI().getQuery();
+            if (query == null || !query.startsWith("userId=")) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Missing or invalid id parameter\"}");
+                return;
+            }
+
+            int userId;
+            try {
+                userId = Integer.parseInt(query.split("=")[1]);
+            } catch (NumberFormatException e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid id format\"}");
+                return;
+            }
+
+            try (Connection conn = MusicAppServer.GetConnection("myroot", "Lhx050918")) {
+                String sql = """
+                DELETE FROM artists
+                WHERE user_id = ?
             """;
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt(1, userId);
@@ -666,6 +799,63 @@ public class MusicAppServer {
             }
 
             sendResponse(exchange, 200, result.toString());
+        }
+    }
+
+    static class HistoryHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            // 只允许 GET
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            // 从请求参数中获取 userId
+            String query = exchange.getRequestURI().getQuery(); // userId=123
+            int userId = -1;
+            if (query != null && query.startsWith("userId=")) {
+                try {
+                    userId = Integer.parseInt(query.substring("userId=".length()));
+                } catch (NumberFormatException e) { }
+            }
+            if (userId < 0) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Missing or invalid userId\"}");
+                return;
+            }
+
+            JsonArray arr = new JsonArray();
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                // 联表查询 song 信息
+                String sql = """
+                SELECT h.id, h.played_at, s.id AS song_id, s.title, s.album, s.duration
+                  FROM history h
+                  JOIN songs s ON h.song_id = s.id
+                 WHERE h.user_id = ?
+                 ORDER BY h.played_at DESC
+            """;
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            JsonObject obj = new JsonObject();
+                            obj.addProperty("historyId", rs.getInt("id"));
+                            obj.addProperty("songId", rs.getInt("song_id"));
+                            obj.addProperty("title", rs.getString("title"));
+                            obj.addProperty("album", rs.getString("album"));
+                            obj.addProperty("duration", rs.getString("duration"));
+                            obj.addProperty("playedAt", rs.getTimestamp("played_at").toString());
+                            arr.add(obj);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, arr.toString());
         }
     }
 

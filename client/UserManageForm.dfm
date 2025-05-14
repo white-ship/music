@@ -29,6 +29,9 @@ object FormUserManage: TFormUserManage
       item
         Caption = #31649#29702#21592
         Width = 100
+      end
+      item
+        Caption = #38899#20048#23478
       end>
     TabOrder = 0
     ViewStyle = vsReport
@@ -68,5 +71,23 @@ object FormUserManage: TFormUserManage
     Caption = #21462#28040#31649#29702#21592
     TabOrder = 4
     OnClick = BtnRemoveAdminClick
+  end
+  object BtnSetArtist: TButton
+    Left = 406
+    Top = 320
+    Width = 89
+    Height = 30
+    Caption = #35774#20026#38899#20048#23478
+    TabOrder = 5
+    OnClick = BtnSetArtistClick
+  end
+  object BtnRemoveArtist: TButton
+    Left = 501
+    Top = 320
+    Width = 75
+    Height = 30
+    Caption = #21462#28040#38899#20048#23478
+    TabOrder = 6
+    OnClick = BtnRemoveArtistClick
   end
 end

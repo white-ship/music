@@ -7,7 +7,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.MPlayer, Vcl.Imaging.jpeg,CurrentUser, System.JSON,
   System.Net.HttpClient,System.Net.URLClient,IdHTTP, IdMultipartFormData,
-  UploadDialog,MusicListForm,UserManageForm;
+  UploadDialog,MusicListForm,UserManageForm,HistoryForm;
 
 type
     TString = class(TObject)
@@ -44,6 +44,7 @@ type
     btnUploadMusic: TButton;
     btnShowMusicList: TButton;
     BtnUserManage: TButton;
+    BtnHistory: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnAddSongClick(Sender: TObject);
@@ -60,6 +61,7 @@ type
     procedure btnShowMusicListClick(Sender: TObject);
     procedure imgAlbumArtClick(Sender: TObject);
     procedure BtnUserManageClick(Sender: TObject);
+    procedure BtnHistoryClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -68,6 +70,7 @@ type
     CurrentTrackIndex: Integer;
 
     procedure LoadTrack(Index: Integer);
+    function GetSongIDFromPath(const FilePath: string): Integer;
     procedure UpdateProgress;
     procedure FormatTimeLabel(Seconds: Integer; var Minutes, Sec: Integer);
   public
@@ -85,6 +88,24 @@ constructor TString.Create(const S: string);
 begin
   inherited Create;
   Data := S;
+end;
+
+procedure TformMain.btnHistoryClick(Sender: TObject);
+begin
+  with TFormHistory.Create(nil) do
+  try
+    ShowModal;
+  finally
+    Free;
+  end;
+end;
+
+function TformMain.GetSongIDFromPath(const FilePath: string): Integer;
+var
+  FileName: string;
+begin
+  FileName := ExtractFileName(FilePath);
+  Result := StrToIntDef(Copy(FileName, 1, Pos('-', FileName)-1), -1);
 end;
 
 procedure TformMain.FormCreate(Sender: TObject);

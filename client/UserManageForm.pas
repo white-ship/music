@@ -14,11 +14,15 @@ type
     BtnDelete: TButton;
     BtnSetAdmin: TButton;
     BtnRemoveAdmin: TButton;
+    BtnSetArtist: TButton;
+    BtnRemoveArtist: TButton;
     procedure FormCreate(Sender: TObject);
     procedure BtnRefreshClick(Sender: TObject);
     procedure BtnDeleteClick(Sender: TObject);
     procedure BtnSetAdminClick(Sender: TObject);
     procedure BtnRemoveAdminClick(Sender: TObject);
+    procedure BtnSetArtistClick(Sender: TObject);
+    procedure BtnRemoveArtistClick(Sender: TObject);
   private
     HTTP: THttpClient;
     procedure LoadUsers;
@@ -71,6 +75,10 @@ begin
       Item.Caption := Obj.GetValue('id').Value;
       Item.SubItems.Add(Obj.GetValue('username').Value);
       if Obj.GetValue('is_admin').AsType<Boolean> then
+        Item.SubItems.Add('ÊÇ')
+      else
+        Item.SubItems.Add('·ñ');
+      if Obj.GetValue('is_artist').AsType<Boolean> then
         Item.SubItems.Add('ÊÇ')
       else
         Item.SubItems.Add('·ñ');
@@ -132,5 +140,42 @@ begin
     UpdateRole(StrToInt(ListViewUsers.Selected.Caption), False);
 end;
 
-end.
+procedure TFormUserManage.BtnSetArtistClick(Sender: TObject);
+var
+  URL: string;
+  Resp: IHTTPResponse;
+  UserID: Integer;
+begin
+  if Assigned(ListViewUsers.Selected) then
+  begin
+      UserID := StrToInt(ListViewUsers.Selected.Caption);
+      URL := Format('http://localhost:4567/users/set_artist?userId=%d', [UserID]);
 
+      Resp := HTTP.Post(URL, TStringStream.Create('', TEncoding.UTF8), nil);
+      if Resp.StatusCode = 200 then
+        LoadUsers
+      else
+        ShowMessage('²Ù×÷Ê§°Ü');
+  end;
+end;
+
+procedure TFormUserManage.BtnRemoveArtistClick(Sender: TObject);
+var
+  URL: string;
+  Resp: IHTTPResponse;
+  UserID: Integer;
+begin
+  if Assigned(ListViewUsers.Selected) then
+  begin
+      UserID := StrToInt(ListViewUsers.Selected.Caption);
+      URL := Format('http://localhost:4567/users/remove_artist?userId=%d', [UserID]);
+
+      Resp := HTTP.Post(URL, TStringStream.Create('', TEncoding.UTF8), nil);
+      if Resp.StatusCode = 200 then
+        LoadUsers
+      else
+        ShowMessage('²Ù×÷Ê§°Ü');
+  end;
+end;
+
+end.

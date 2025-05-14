@@ -146,6 +146,10 @@
             <Form>FormUserManage</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="HistoryForm.pas">
+            <Form>FormHistory</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
