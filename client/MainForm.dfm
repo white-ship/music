@@ -19,7 +19,7 @@ object formMain: TformMain
     Height = 560
     Align = alLeft
     TabOrder = 0
-    ExplicitHeight = 543
+    ExplicitHeight = 552
     object lblPlaylist: TLabel
       Left = 16
       Top = 16
@@ -62,8 +62,8 @@ object formMain: TformMain
     Height = 560
     Align = alClient
     TabOrder = 1
-    ExplicitWidth = 644
-    ExplicitHeight = 543
+    ExplicitWidth = 648
+    ExplicitHeight = 552
     object imgAlbumArt: TImage
       Left = 50
       Top = 82
@@ -123,6 +123,14 @@ object formMain: TformMain
       TabOrder = 3
       OnClick = BtnHistoryClick
     end
+    object ButtonFavorites: TButton
+      Left = 496
+      Top = 407
+      Width = 105
+      Height = 50
+      Caption = #25105#30340#25910#34255
+      TabOrder = 4
+    end
   end
   object pnlControls: TPanel
     Left = 0
@@ -131,8 +139,8 @@ object formMain: TformMain
     Height = 40
     Align = alBottom
     TabOrder = 2
-    ExplicitTop = 543
-    ExplicitWidth = 894
+    ExplicitTop = 552
+    ExplicitWidth = 898
     object lblCurrentTime: TLabel
       Left = 300
       Top = 12

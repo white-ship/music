@@ -42,6 +42,8 @@ public class MusicAppServer {
         server.createContext("/users/remove_artist", new RemoveArtistHandler());
         server.createContext("/music/search", new SearchHandler());
         server.createContext("/history", new HistoryHandler());
+        server.createContext("/favorites/list", new FavoritesListHandler());
+        server.createContext("/favorites/add", new FavoritesAddHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -856,6 +858,98 @@ public class MusicAppServer {
             }
 
             sendResponse(exchange, 200, arr.toString());
+        }
+    }
+
+    static class FavoritesListHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"GET".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            String query = exchange.getRequestURI().getQuery();
+            int userId;
+            try {
+                userId = Integer.parseInt(query.split("=")[1]);
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid userId\"}");
+                return;
+            }
+
+            JsonArray favorites = new JsonArray();
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = """
+                SELECT s.id, s.title, s.album, s.duration, u.username AS uploaded_by
+                  FROM favorites f
+                  JOIN songs s ON f.song_id = s.id
+                  JOIN users u ON s.uploaded_by = u.id
+                 WHERE f.user_id = ?
+                 ORDER BY f.favorited_at DESC
+            """;
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            JsonObject song = new JsonObject();
+                            song.addProperty("id", rs.getInt("id"));
+                            song.addProperty("title", rs.getString("title"));
+                            song.addProperty("album", rs.getString("album"));
+                            song.addProperty("duration", rs.getString("duration"));
+                            song.addProperty("uploaded by", rs.getString("uploaded_by"));
+                            favorites.add(song);
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, favorites.toString());
+        }
+    }
+
+    static class FavoritesAddHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            // 解析请求体
+            String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
+                    .lines().collect(Collectors.joining("\n"));
+            JsonObject requestJson;
+            int userId, songId;
+
+            try {
+                requestJson = JsonParser.parseString(body).getAsJsonObject();
+                userId = requestJson.get("userId").getAsInt();
+                songId = requestJson.get("songId").getAsInt();
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid JSON format\"}");
+                return;
+            }
+
+            // 插入收藏记录
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = "INSERT INTO favorites(user_id, song_id, favorited_at) VALUES(?, ?, now())";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, songId);
+                    ps.executeUpdate();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Favorite added\"}");
         }
     }
 

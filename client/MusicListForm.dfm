@@ -40,6 +40,10 @@ object FormMusicList: TFormMusicList
   object PopupMenu1: TPopupMenu
     Left = 152
     Top = 184
+    object MunuItemFav: TMenuItem
+      Caption = #25910#34255#38899#20048
+      OnClick = MenuItemAddFavoriteClick
+    end
     object MenuItemDelete: TMenuItem
       Caption = #21024#38500#35813#38899#20048
       OnClick = MenuItemDeleteClick

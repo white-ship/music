@@ -17,7 +17,6 @@ type
     end;
 
     TformMain = class(Tform)
-    // 左侧播放列表面板
     pnlPlaylist: TPanel;
     lblPlaylist: TLabel;
     lstPlaylist: TListBox;
@@ -45,6 +44,7 @@ type
     btnShowMusicList: TButton;
     BtnUserManage: TButton;
     BtnHistory: TButton;
+    ButtonFavorites: TButton;
 
     procedure FormCreate(Sender: TObject);
     procedure btnAddSongClick(Sender: TObject);
@@ -62,6 +62,7 @@ type
     procedure imgAlbumArtClick(Sender: TObject);
     procedure BtnUserManageClick(Sender: TObject);
     procedure BtnHistoryClick(Sender: TObject);
+    procedure ButtonFavoritesClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -154,6 +155,7 @@ begin
 
   btnUploadMusic.Visible := isArtist or AppUser.IsAdmin;
   BtnUserManage.Visible := AppUser.IsAdmin;
+  ButtonFavorites.OnClick := ButtonFavoritesClick;
 end;
 
 //用户管理
@@ -470,5 +472,79 @@ begin
       MediaPlayer1.Play;
   end;
 end;
+
+procedure TformMain.ButtonFavoritesClick(Sender: TObject);
+var
+  Resp: IHTTPResponse;
+  RespText: string;
+  JsonVal: TJSONValue;
+  JsonArr: TJSONArray;
+  Obj: TJSONObject;
+  Item: TListItem;
+  I: Integer;
+  URL: string;
+begin
+  // 创建音乐列表窗口
+  FormMusicList := TFormMusicList.Create(nil);
+  try
+    // 初始化 HTTP 和列表样式
+    FormMusicList.HTTP := THttpClient.Create;
+    FormMusicList.ListView1.ViewStyle := vsReport;
+    FormMusicList.ListView1.Columns.Clear;
+    FormMusicList.ListView1.Columns.Add.Caption := 'ID';
+    FormMusicList.ListView1.Columns.Add.Caption := '标题';
+    FormMusicList.ListView1.Columns.Add.Caption := '专辑';
+    FormMusicList.ListView1.Columns.Add.Caption := '时长';
+    FormMusicList.ListView1.Columns.Add.Caption := '上传者';
+
+    // 请求收藏数据
+    URL := Format('http://localhost:4567/favorites/list?userId=%d', [AppUser.UserID]);
+    Resp := FormMusicList.HTTP.Get(URL);
+    RespText := Resp.ContentAsString(TEncoding.UTF8);
+
+    if Resp.StatusCode <> 200 then
+    begin
+      ShowMessage('加载收藏失败：' + Resp.StatusCode.ToString);
+      Exit;
+    end;
+
+    // 解析 JSON 并填充列表
+    JsonVal := TJSONObject.ParseJSONValue(RespText);
+    JsonArr := JsonVal as TJSONArray;
+
+    FormMusicList.ListView1.Items.BeginUpdate;
+    try
+      FormMusicList.ListView1.Items.Clear;
+      for I := 0 to JsonArr.Count - 1 do
+      begin
+        if not (JsonArr.Items[I] is TJSONObject) then Continue;
+
+        Obj := JsonArr.Items[I] as TJSONObject;
+        Item := FormMusicList.ListView1.Items.Add;
+        Item.Caption := Obj.GetValue('id', '0');
+        Item.SubItems.Add(Obj.GetValue('title', '未知标题'));
+        Item.SubItems.Add(Obj.GetValue('album', '未知专辑'));
+        Item.SubItems.Add(Obj.GetValue('duration', '未知时长'));
+        Item.SubItems.Add(Obj.GetValue('uploaded_by', '未知上传者')); // 注意字段名要匹配后端
+      end;
+    finally
+      FormMusicList.ListView1.Items.EndUpdate;
+    end;
+
+    JsonArr.Free;
+
+    // 显示窗口
+    FormMusicList.Show;
+  except
+    on E: Exception do
+    begin
+      if Assigned(FormMusicList.HTTP) then
+        FormMusicList.HTTP.Free;
+      FormMusicList.Free;
+      ShowMessage('发生错误：' + E.Message);
+    end;
+  end;
+end;
+
 
 end.

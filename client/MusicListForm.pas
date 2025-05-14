@@ -15,17 +15,18 @@ type
     MenuItemDelete: TMenuItem;
     EditSearch: TEdit;
     ButtonSearch: TButton;
+    MunuItemFav: TMenuItem;
     procedure ListView1DblClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure MenuItemDeleteClick(Sender: TObject);
     procedure ListView1ContextPopup(Sender: TObject; MousePos: TPoint; var Handled: Boolean);
     procedure ButtonSearchClick(Sender: TObject);
+    procedure MenuItemAddFavoriteClick(Sender: TObject);
   public
     HTTP: THttpClient;
     procedure DownloadByID(const ID: Integer; const Title: string);
     procedure LoadMusicList(const Keyword: string = '');
-
   end;
 
 var
@@ -217,6 +218,38 @@ procedure TFormMusicList.FormDestroy(Sender: TObject);
 begin
   HTTP.Free;
 end;
+
+procedure TFormMusicList.MenuItemAddFavoriteClick(Sender: TObject);
+var
+  ID: Integer;
+  URL: string;
+  Resp: IHTTPResponse;
+  JSON: TJSONObject;
+  RespText: string;
+begin
+  if not Assigned(ListView1.Selected) then Exit;
+
+  ID := StrToInt(ListView1.Selected.Caption);
+  URL := 'http://localhost:4567/favorites/add';
+
+  HTTP.CustomHeaders['Content-Type'] := 'application/json';
+  JSON := TJSONObject.Create;
+  try
+    JSON.AddPair('userId', TJSONNumber.Create(AppUser.UserID));
+    JSON.AddPair('songId', TJSONNumber.Create(ID));
+
+    Resp := HTTP.Post(URL, TStringStream.Create(JSON.ToString, TEncoding.UTF8));
+    RespText := Resp.ContentAsString(TEncoding.UTF8);
+
+    if Resp.StatusCode = 200 then
+      ShowMessage('收藏成功')
+    else
+      ShowMessage('收藏失败：' + RespText);
+  finally
+    JSON.Free;
+  end;
+end;
+
 
 end.
 
