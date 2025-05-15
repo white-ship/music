@@ -43,6 +43,22 @@ $$;
 ALTER FUNCTION public.add_user_with_default_role(username character varying, password text, default_role_name character varying) OWNER TO myroot;
 
 --
+-- Name: delete_favorites_on_song_delete(); Type: FUNCTION; Schema: public; Owner: myroot
+--
+
+CREATE FUNCTION delete_favorites_on_song_delete() RETURNS trigger
+    LANGUAGE plpgsql NOT SHIPPABLE
+ AS $$
+BEGIN
+    DELETE FROM favorites WHERE song_id = OLD.id;
+    RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION public.delete_favorites_on_song_delete() OWNER TO myroot;
+
+--
 -- Name: delete_user_roles_on_artist_delete(); Type: FUNCTION; Schema: public; Owner: myroot
 --
 
@@ -59,6 +75,22 @@ $$;
 
 
 ALTER FUNCTION public.delete_user_roles_on_artist_delete() OWNER TO myroot;
+
+--
+-- Name: delete_user_roles_on_user_delete(); Type: FUNCTION; Schema: public; Owner: myroot
+--
+
+CREATE FUNCTION delete_user_roles_on_user_delete() RETURNS trigger
+    LANGUAGE plpgsql NOT SHIPPABLE
+ AS $$
+BEGIN
+    DELETE FROM user_roles WHERE user_id = OLD.id;
+    RETURN OLD;
+END;
+$$;
+
+
+ALTER FUNCTION public.delete_user_roles_on_user_delete() OWNER TO myroot;
 
 --
 -- Name: update_last_played_time(); Type: FUNCTION; Schema: public; Owner: myroot
@@ -444,6 +476,7 @@ ALTER TABLE users ALTER COLUMN id SET DEFAULT nextval('users_id_seq'::regclass);
 
 COPY artists (id, user_id) FROM stdin;
 1	9
+8	1
 \.
 ;
 
@@ -451,7 +484,7 @@ COPY artists (id, user_id) FROM stdin;
 -- Name: artists_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myroot
 --
 
-SELECT pg_catalog.setval('artists_id_seq', 7, true);
+SELECT pg_catalog.setval('artists_id_seq', 8, true);
 
 
 --
@@ -459,7 +492,6 @@ SELECT pg_catalog.setval('artists_id_seq', 7, true);
 --
 
 COPY favorites (id, user_id, song_id, favorited_at) FROM stdin;
-1	9	1	2025-04-30 03:29:35.805858
 \.
 ;
 
@@ -467,7 +499,7 @@ COPY favorites (id, user_id, song_id, favorited_at) FROM stdin;
 -- Name: favorites_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myroot
 --
 
-SELECT pg_catalog.setval('favorites_id_seq', 5, true);
+SELECT pg_catalog.setval('favorites_id_seq', 6, true);
 
 
 --
@@ -475,10 +507,6 @@ SELECT pg_catalog.setval('favorites_id_seq', 5, true);
 --
 
 COPY history (id, user_id, song_id, played_at) FROM stdin;
-1	9	1	2025-04-30 00:21:21.862477
-2	9	1	2025-04-30 04:08:05.069841
-3	9	1	2025-04-30 04:09:10.628164
-4	9	1	2025-04-30 04:10:07.404142
 \.
 ;
 
@@ -486,7 +514,7 @@ COPY history (id, user_id, song_id, played_at) FROM stdin;
 -- Name: history_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myroot
 --
 
-SELECT pg_catalog.setval('history_id_seq', 4, true);
+SELECT pg_catalog.setval('history_id_seq', 5, true);
 
 
 --
@@ -535,8 +563,7 @@ SELECT pg_catalog.setval('roles_id_seq', 3, true);
 --
 
 COPY songs (id, title, album, duration, downloads, uploaded_by, released_at, file_key) FROM stdin;
-2	great	great	160	0	1	2025-04-30 04:09:59.340919	uploads/周杰伦 - 最伟大的作品.wav
-1	mojito	mojito	180	2	1	2025-04-30 04:09:05.060733	uploads/mojito.wav
+4	greatest	greatest	180	0	1	2025-05-15 14:46:00.02938	uploads/周杰伦 - 最伟大的作品.wav
 \.
 ;
 
@@ -544,7 +571,7 @@ COPY songs (id, title, album, duration, downloads, uploaded_by, released_at, fil
 -- Name: songs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myroot
 --
 
-SELECT pg_catalog.setval('songs_id_seq', 2, true);
+SELECT pg_catalog.setval('songs_id_seq', 4, true);
 
 
 --
@@ -554,6 +581,7 @@ SELECT pg_catalog.setval('songs_id_seq', 2, true);
 COPY user_roles (user_id, role_id) FROM stdin;
 9	1
 9	2
+1	2
 \.
 ;
 
@@ -562,9 +590,9 @@ COPY user_roles (user_id, role_id) FROM stdin;
 --
 
 COPY users (id, username, password, created_at) FROM stdin;
-1	user2	a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3	2025-04-29 15:48:55.708917
-2	user1	a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3	2025-04-29 15:49:22.894904
 9	test	9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08	2025-04-29 15:54:21.664335
+1	user3	a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3	2025-04-29 15:48:55.708917
+2	user_change	a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3	2025-04-29 15:49:22.894904
 \.
 ;
 
@@ -572,7 +600,7 @@ COPY users (id, username, password, created_at) FROM stdin;
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: myroot
 --
 
-SELECT pg_catalog.setval('users_id_seq', 9, true);
+SELECT pg_catalog.setval('users_id_seq', 12, true);
 
 
 --
@@ -680,10 +708,24 @@ ALTER TABLE users
 
 
 --
+-- Name: tri_delete_favorites_on_song_delete; Type: TRIGGER; Schema: public; Owner: myroot
+--
+
+CREATE TRIGGER tri_delete_favorites_on_song_delete AFTER DELETE ON public.songs FOR EACH ROW EXECUTE PROCEDURE public.delete_favorites_on_song_delete();
+
+
+--
 -- Name: tri_delete_user_roles_on_artist_delete; Type: TRIGGER; Schema: public; Owner: myroot
 --
 
 CREATE TRIGGER tri_delete_user_roles_on_artist_delete AFTER DELETE ON public.artists FOR EACH ROW EXECUTE PROCEDURE public.delete_user_roles_on_artist_delete();
+
+
+--
+-- Name: tri_delete_user_roles_on_user_delete; Type: TRIGGER; Schema: public; Owner: myroot
+--
+
+CREATE TRIGGER tri_delete_user_roles_on_user_delete AFTER DELETE ON public.users FOR EACH ROW EXECUTE PROCEDURE public.delete_user_roles_on_user_delete();
 
 
 --
