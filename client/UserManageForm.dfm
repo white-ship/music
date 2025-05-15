@@ -35,6 +35,7 @@ object FormUserManage: TFormUserManage
       end>
     TabOrder = 0
     ViewStyle = vsReport
+    OnDblClick = ListViewUsersDblClick
   end
   object BtnRefresh: TButton
     Left = 10

@@ -23,6 +23,7 @@ type
     procedure BtnRemoveAdminClick(Sender: TObject);
     procedure BtnSetArtistClick(Sender: TObject);
     procedure BtnRemoveArtistClick(Sender: TObject);
+    procedure ListViewUsersDblClick(Sender: TObject);
   private
     HTTP: THttpClient;
     procedure LoadUsers;
@@ -35,6 +36,42 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TFormUserManage.ListViewUsersDblClick(Sender: TObject);
+var
+  Item: TListItem;
+  OldUsername, NewUsername, ID: string;
+  JSON: TJSONObject;
+  Resp: IHTTPResponse;
+begin
+  Item := ListViewUsers.Selected;
+  if not Assigned(Item) then Exit;
+
+  ID := Item.Caption;
+  OldUsername := Item.SubItems[0];
+
+  NewUsername := InputBox('修改用户名', '请输入新的用户名：', OldUsername);
+  if (NewUsername = '') or (NewUsername = OldUsername) then Exit;
+
+  JSON := TJSONObject.Create;
+  try
+    JSON.AddPair('id', ID);
+    JSON.AddPair('username', NewUsername);
+
+    Resp := HTTP.Post('http://localhost:4567/users/update_username',
+      TStringStream.Create(JSON.ToJSON, TEncoding.UTF8), nil);
+
+    if Resp.StatusCode = 200 then
+    begin
+      ShowMessage('修改成功');
+      LoadUsers;
+    end
+    else
+      ShowMessage('修改失败，状态码：' + Resp.StatusCode.ToString);
+  finally
+    JSON.Free;
+  end;
+end;
 
 procedure TFormUserManage.FormCreate(Sender: TObject);
 begin

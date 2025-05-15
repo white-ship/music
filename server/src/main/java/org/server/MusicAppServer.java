@@ -45,6 +45,7 @@ public class MusicAppServer {
         server.createContext("/favorites/list", new FavoritesListHandler());
         server.createContext("/favorites/add", new FavoritesAddHandler());
         server.createContext("/favorites/remove", new FavoritesRemoveHandler());
+        server.createContext("/users/update_username", new UpdateUsernameHandler());
         server.setExecutor(null);
         server.start();
         System.out.println("Server started at http://localhost:4567");
@@ -1009,6 +1010,52 @@ public class MusicAppServer {
             }
 
             sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Favorite removed\"}");
+        }
+    }
+
+    static class UpdateUsernameHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            if (!"POST".equals(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                return;
+            }
+
+            // 解析请求体
+            String body = new BufferedReader(new InputStreamReader(exchange.getRequestBody(), StandardCharsets.UTF_8))
+                    .lines().collect(Collectors.joining("\n"));
+            JsonObject requestJson;
+            int userId;
+            String newUsername;
+
+            try {
+                requestJson = JsonParser.parseString(body).getAsJsonObject();
+                userId = requestJson.get("id").getAsInt();
+                newUsername = requestJson.get("username").getAsString();
+            } catch (Exception e) {
+                sendResponse(exchange, 400, "{\"status\":\"error\",\"message\":\"Invalid JSON format\"}");
+                return;
+            }
+
+            // 更新用户名
+            try (Connection conn = GetConnection("myroot", "Lhx050918")) {
+                String sql = "UPDATE users SET username = ? WHERE id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, newUsername);
+                    ps.setInt(2, userId);
+                    int rowsAffected = ps.executeUpdate();
+                    if (rowsAffected == 0) {
+                        sendResponse(exchange, 404, "{\"status\":\"error\",\"message\":\"User not found\"}");
+                        return;
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendResponse(exchange, 500, "{\"status\":\"error\",\"message\":\"Database error\"}");
+                return;
+            }
+
+            sendResponse(exchange, 200, "{\"status\":\"success\",\"message\":\"Username updated\"}");
         }
     }
 
