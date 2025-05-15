@@ -82,12 +82,17 @@ begin
       end;
     end
     else if Path = '/register' then
-    begin
-      if Pos('Registered', ResponseText) > 0 then
-        ShowMessage('×¢²á³É¹¦£¡')
-      else
-        ShowMessage('×¢²áÊ§°Ü£º' + ResponseText);
-    end;
+      begin
+        var Json := TJSONObject.ParseJSONValue(ResponseText) as TJSONObject;
+        try
+          if Assigned(Json) and (Json.GetValue('status').Value = 'success') then
+            ShowMessage('×¢²á³É¹¦£¡')
+          else
+            ShowMessage('×¢²áÊ§°Ü£º' + Json.ToString);
+        finally
+          Json.Free;
+        end;
+      end;
   except
     on E: Exception do
     begin
